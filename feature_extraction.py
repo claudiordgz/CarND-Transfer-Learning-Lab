@@ -1,6 +1,10 @@
 import pickle
 import tensorflow as tf
 # TODO: import Keras layers you need here
+import numpy as np
+from keras.layers import Input, Flatten, Dense, Activation
+from keras.models import Model
+from keras.activations import relu, softmax
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
@@ -8,7 +12,8 @@ FLAGS = flags.FLAGS
 # command line flags
 flags.DEFINE_string('training_file', '', "Bottleneck features training file (.p)")
 flags.DEFINE_string('validation_file', '', "Bottleneck features validation file (.p)")
-
+flags.DEFINE_integer('epochs', 50, "The number of epochs.")
+flags.DEFINE_integer('batch_size', 256, "The batch size.")
 
 def load_bottleneck_data(training_file, validation_file):
     """
@@ -46,8 +51,17 @@ def main(_):
     # the dataset
     # 10 for cifar10
     # 43 for traffic
+    nb_classes = len(np.unique(y_train))
+    input_shape = X_train.shape[1:]
+    inp = Input(shape=input_shape)
+    x = Flatten()(inp)
+    x = Dense(nb_classes, activation='softmax')(x)
+    model = Model(inp, x)
+    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
     # TODO: train your model here
+    csv_logger = CSVLogger('{file}.log'.format(file=FLAGS.training_file))
+    model.fit(X_train, y_train, nb_epoch=FLAGS.epochs, batch_size=FLAGS.batch_size, verbose=2, validation_data=(X_val, y_val), shuffle=True, callbacks=[csv_logger])
 
 
 # parses flags and calls the `main` function above
